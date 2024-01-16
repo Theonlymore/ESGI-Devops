@@ -1,0 +1,37 @@
+version: '3.8'
+services:
+  nginx:
+    hostname: nginx
+    build: 
+      context: .
+      dockerfile: dockerfile-nginx
+    ports:
+      - 7000:80
+    volumes:
+      - ./log/nginx:/var/log/nginx/      
+    networks:
+      - alex
+  supervi:
+    build: 
+      context: .
+      dockerfile: dockerfile-supervi
+    volumes:
+      - ./log/nginx:/servlog/
+    depends_on:
+      - nginx
+    networks:    
+      - alex
+  curl:
+    build: 
+      context: .
+      dockerfile: dockerfile-curl
+    depends_on:
+      - nginx
+    networks:    
+      - alex
+
+
+networks:
+  alex:
+    driver: bridge
+

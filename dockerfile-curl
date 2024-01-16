@@ -1,0 +1,13 @@
+FROM radial/busyboxplus:curl
+
+# Set the server URL to your desired endpoint
+ENV SERVER_URL=http://nginx
+
+# Create a simple script to send requests to the server
+RUN echo -e "#!/bin/sh\nwhile true; do curl \$SERVER_URL; sleep 1; done" > /send_requests.sh
+
+# Make the script executable
+RUN chmod +x /send_requests.sh
+
+# Run the script when the container starts
+CMD ["/send_requests.sh"]
