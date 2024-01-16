@@ -4,7 +4,7 @@ FROM radial/busyboxplus:curl
 ENV SERVER_URL=http://nginx
 
 # Create a simple script to send requests to the server
-RUN echo -e "#!/bin/sh\nwhile true; do curl \$SERVER_URL; sleep 1; done" > /send_requests.sh
+RUN echo -e "#!/bin/sh\nwhile true; do curl \$SERVER_URL; done" > /send_requests.sh
 
 # Make the script executable
 RUN chmod +x /send_requests.sh

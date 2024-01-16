@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  traefik:
+    image: "traefik:v2.5"
+    container_name: "traefik"
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.metrics.address=:8081"  # Ajout d'un point d'entrée pour les métriques sur le port 8080
+      - "--metrics.prometheus.entryPoint=metrics"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"  # Configuration de la latence des métriques
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.alex.lan`)"
+      - "traefik.http.routers.traefik.entrypoints=web"
+      - "traefik.http.routers.traefik.middlewares=traefik-prometheus"
+      - "traefik.http.middlewares.traefik-prometheus.plugin.prometheus.buckets=0.1,0.3,1.2,5.0"
+      - "traefik.http.middlewares.traefik-prometheus.plugin.prometheus.addEntryPointsLabels=true"
+      - "traefik.http.middlewares.traefik-prometheus.plugin.prometheus.addServicesLabels=true"
+  wordpress:
+    image: "wordpress:latest"
+    container_name: "wordpress"
+    environment:
+      - WORDPRESS_DB_HOST=mysql
+      - WORDPRESS_DB_USER=root
+      - WORDPRESS_DB_PASSWORD=rootpassword
+      - WORDPRESS_DB_NAME=wordpress
+    volumes:
+      - ./wp-content:/var/www/html/wp-content
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wordpress.rule=Host(`wordpress.alex.lan`)"
+      - "traefik.http.routers.wordpress.entrypoints=web"
+  mysql:
+    image: "mysql:5.7"
+    container_name: "mysql"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword
+      - MYSQL_DATABASE=wordpress
+    volumes:
+      - ./mysql:/var/lib/mysql
+
+  httpd:
+    image: "httpd:latest"
+    container_name: "httpd"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.httpd.rule=Host(`web.alex.lan`)"
+      - "traefik.http.routers.httpd.entrypoints=web"
+  prometheus:
+    image: "prom/prometheus:v2.28.1"
+    container_name: "prometheus"
+    volumes:
+      - ./prometheus:/etc/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9090:9090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.alex.lan`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 3000:3000
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.alex.lan`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"  # Specify the port
